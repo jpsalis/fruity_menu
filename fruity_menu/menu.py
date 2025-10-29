@@ -4,14 +4,17 @@ try:
 except ImportError:
     pass
 
-from displayio import Display, Group
+from displayio import Group
+from busdisplay import BusDisplay
 from os import getcwd
 import terminalio
 from time import time
+import adafruit_datetime
+
 from adafruit_display_text.bitmap_label import Label
 from adafruit_bitmapsaver import save_pixels
 
-from fruity_menu.adjust import AdjustMenu, BoolMenu, NumberMenu, OptionMenu
+from fruity_menu.adjust import AdjustMenu, BoolMenu, NumberMenu, OptionMenu, DateMenu, TimeMenu
 from fruity_menu.abstract import AbstractMenu
 from fruity_menu.options import ActionButton, SubmenuButton, ValueButton
 
@@ -27,7 +30,7 @@ OPT_TEXT_COLOR = 0xFFAA00
 OPT_BACK_COLOR = 0x0000FF
 """RGB color code to use for the background in UNselected items"""
 
-PX_PER_LINE = 14
+PX_PER_LINE = 12
 """Number of pixels each line is allotted. This should roughly match the pt and scale of the font."""
 
 SCROLL_UP_AFTER_EXIT_SUBMENU = True
@@ -47,7 +50,7 @@ class Menu(AbstractMenu):
     Boolean which tells whether the menu is currently Opened
     """
     
-    _display: Display = None
+    _display: BusDisplay = None
     """
     The Display object instatiated from your driver/main. Used to access the display and controls.
     """
@@ -98,7 +101,7 @@ class Menu(AbstractMenu):
     This will seriously slow down the device and may quickly fill it up--use at your own risk!
     """
 
-    def __init__(self, display: Display, height, width, show_menu_title = True, title: str = 'Menu'):
+    def __init__(self, display: BusDisplay, height, width, show_menu_title = True, title: str = 'Menu'):
         """
         Create a Menu for the given display.
         """
@@ -148,10 +151,14 @@ class Menu(AbstractMenu):
         """Add a button to this menu that lets users modify the value of the given variable"""
         
         if isinstance(value, bool):
-            submenu = BoolMenu(value, title, self._height, self._width, value_set=on_value_set, value_set_args=on_set_args)
+            submenu = BoolMenu(value, title, self._height, self._width, value_set=on_value_set, value_set_args=on_set_args, )
         elif isinstance(value, int) or isinstance(value, float):
             submenu = NumberMenu(number=value, label=title, height=self._height, width=self._width, value_set=on_value_set,
                                  value_set_args=on_set_args, scroll_mulitply_factor=scroll_factor, min_value=min_val, max_value=max_val)
+        elif isinstance(value, adafruit_datetime.date):
+            submenu = DateMenu(value, label=title, height=self._height, width=self._width, value_set = on_value_set, value_set_args=on_set_args)
+        elif isinstance(value, adafruit_datetime.time):
+            submenu = TimeMenu(value, label=title, height=self._height, width=self._width, value_set = on_value_set, value_set_args=on_set_args)
         else:
             raise NotImplementedError()
             
@@ -216,11 +223,11 @@ class Menu(AbstractMenu):
 
     def get_title_label(self) -> Label:
         """Gets the Label for this menu's title and adjusts the builder's coordinates to compensate for the object"""
-        lbl = Label(terminalio.FONT, text='    ' + self._title, save_text=False)
+        lbl = Label(terminalio.FONT, text= ' ' + self._title + ' ', save_text=False)
         lbl.color = OPT_HIGHLIGHT_TEXT_COLOR
         lbl.background_color = OPT_HIGHLIGHT_BACK_COLOR
-        lbl.anchored_position = (0, self._y)
-        lbl.anchor_point = (0, 0)
+        lbl.anchored_position = (self._width // 2, self._y)
+        lbl.anchor_point = (0.5, 0)
         self._y = self._y + PX_PER_LINE
         return lbl
     
